@@ -11,7 +11,7 @@ const Neighbour = struct {
 };
 
 fn run_ip(io: Io, allocator: Allocator) !std.process.RunResult {
-    const result: std.process.RunResult = try std.process.run(allocator, io, .{ .argv = &.{ "ip", "-j", "neigh" } });
+    const result: std.process.RunResult = try std.process.run(allocator, io, .{ .argv = &.{ "arp-scan", "--interface=wlp0s20f3", "--localnet", "--plain" } });
 
     switch (result.term) {
         .exited => |code| {
@@ -30,15 +30,4 @@ pub fn main(init: std.process.Init) !void {
     const result = try run_ip(init.io, allocator);
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
-
-    const parsed = try std.json.parseFromSlice([]Neighbour, allocator, result.stdout, .{ .ignore_unknown_fields = true });
-    defer parsed.deinit();
-
-    for (parsed.value) |neighbor| {
-        std.debug.print("{s} on {s}, MAC: {s}\n", .{
-            neighbor.dst,
-            neighbor.dev,
-            neighbor.lladdr orelse "unknown",
-        });
-    }
 }
