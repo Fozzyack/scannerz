@@ -3,6 +3,13 @@ const std = @import("std");
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
 
+const Neighbour = struct {
+    dst: []const u8,
+    dev: []const u8,
+    lladdr: ?[]const u8,
+    state: []const []const u8,
+};
+
 fn run_ip(io: Io, allocator: Allocator) !std.process.RunResult {
     const result: std.process.RunResult = try std.process.run(allocator, io, .{ .argv = &.{ "ip", "-j", "neigh" } });
 
@@ -23,4 +30,15 @@ pub fn main(init: std.process.Init) !void {
     const result = try run_ip(init.io, allocator);
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
+
+    const parsed = try std.json.parseFromSlice([]Neighbour, allocator, result.stdout, .{ .ignore_unknown_fields = true });
+    defer parsed.deinit();
+
+    for (parsed.value) |neighbor| {
+        std.debug.print("{s} on {s}, MAC: {s}\n", .{
+            neighbor.dst,
+            neighbor.dev,
+            neighbor.lladdr orelse "unknown",
+        });
+    }
 }
